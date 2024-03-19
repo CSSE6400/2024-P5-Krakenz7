@@ -108,10 +108,7 @@ resource "aws_ecs_task_definition" "taskoverflow" {
             "environment": [
                 {
                     "name": "SQLALCHEMY_DATABASE_URI",
-                    "value": "postgresql://${local.database_username}:${local.database_password}
-                        @${aws_db_instance.taskoverflow_database.address}:${aws_db_instance.
-                        taskoverflow_database.port}/${aws_db_instance.taskoverflow_database.
-                        db_name}"
+                    "value": "postgresql://${local.database_username}:${local.database_password}@${aws_db_instance.taskoverflow_database.address}:${aws_db_instance.taskoverflow_database.port}/${aws_db_instance.taskoverflow_database.db_name}"
                 }
             ],
             "logConfiguration": {
@@ -126,4 +123,43 @@ resource "aws_ecs_task_definition" "taskoverflow" {
         }
     ]
     DEFINITION
+}
+
+resource "aws_ecs_service" "taskoverflow" {
+    name = "taskoverflow"
+    cluster = aws_ecs_cluster.taskoverflow.id
+    task_definition = aws_ecs_task_definition.taskoverflow.arn
+    desired_count = 1
+    launch_type = "FARGATE"
+    network_configuration {
+        subnets = data.aws_subnets.private.ids
+        security_groups = [aws_security_group.taskoverflow.id]
+        assign_public_ip = true
+    }
+}
+
+resource "aws_security_group" "taskoverflow" {
+    name = "taskoverflow"
+    description = "TaskOverflow Security Group"
+    
+    ingress {
+        from_port = 6400
+        to_port = 6400
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
 }
